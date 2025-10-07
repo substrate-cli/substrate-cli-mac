@@ -119,10 +119,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 osascript <<EOF
 tell application "Terminal"
-    do script "cd '$SCRIPT_DIR' && docker-compose -f docker-compose-public.yml run --rm --name $API_CONTAINER_NAME --service-ports api-server; exit"
+    do script "cd '$SCRIPT_DIR' && echo 'checking connection...' && stty -echo && docker-compose -f docker-compose-public.yml run --rm --name $API_CONTAINER_NAME --service-ports api-server; exit"
     activate
 end tell
 EOF
+
+echo "checking connection..."
 
 # -----------------------------
 # Keep-alive loop with interruptible wait
@@ -130,6 +132,7 @@ EOF
 echo ""
 echo "🟢 System is running. Press Ctrl+C to gracefully shutdown all services."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "ℹ️  Note: Wait 10 seconds after the API window opens before interacting."
 
 while true; do
     sleep 60 &
