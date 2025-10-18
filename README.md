@@ -13,6 +13,12 @@ to download generated project, run './download.command'
 ./download.command
 ```
 
+if any issues during file execution, pls run:
+
+```bash
+chmod +x subs2.command 
+```
+
 substrate-cli microservices,   
 api-server - https://github.com/substrate-cli/api-server.  
 consumer-service - https://github.com/substrate-cli/consumer-service-cli.   
