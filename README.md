@@ -2,6 +2,7 @@
 Substrate CLI directions, for Mac.
 
 # run substrate-cli
+make sure to download and run docker daemon before running substrate-cli.   
 cd into the directory and summon a terminal from that directory, type in './subs2.command'.   
 ```bash 
 ./subs2.command
