@@ -13,3 +13,9 @@ to download generated project, run './download.command'
 ./download.command
 ```
 
+substrate-cli microservices,   
+api-server - https://github.com/substrate-cli/api-server.  
+consumer-service - https://github.com/substrate-cli/consumer-service-cli.   
+llm-node - https://github.com/substrate-cli/llm-node-cli.  
+
+for detailed instructions on how substrate-cli works underneath, check out https://trysubstrate.com
