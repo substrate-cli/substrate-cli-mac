@@ -1,0 +1,133 @@
+# version 3.9
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672" # RabbitMQ client port
+      - "15672:15672" # RabbitMQ management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379" # Redis port
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+
+  api-server:
+    image: ghcr.io/substrate-cli/substrate-cli-api-server:latest
+    container_name: api-server
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - substrate-data:/apps/substrate-home
+    environment:
+      - SAFE_ORIGINS=http://consumer-service:8090,http://api-server:8080,http://llm-node:3000
+      - NODE=api-server
+      - PORT=8080
+      - MODE=cli
+      - BUNDLE=docker
+      - DEFAULT_USER=987
+      - SUPPORTED_MODELS=anthropic,openai,gemini
+      - REDIS_ADDR=redis:6379
+      - AMQP_URL=amqp://guest:guest@rabbitmq:5672/
+    healthcheck:
+      test: ["CMD-SHELL", "sleep 3; curl -f http://localhost:8080/ || exit 1"]
+      interval: 5s
+      retries: 5
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      consumer-service:
+        condition: service_healthy
+
+  consumer-service:
+    image: ghcr.io/substrate-cli/substrate-cli-consumer-service:latest
+    container_name: consumer-service
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - substrate-data:/apps/substrate-home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - ANTHROPIC_KEY=
+      - ANTHROPIC_URL=https://api.anthropic.com/v1/messages
+      - ANTHROPIC_MAX_TOKENS=32000
+      - ANTHROPIC_MAX_TOKENS_PRECHECK=1024
+      - API_SERVER_URL=http://api-server:8080
+      - OPENAI_KEY=
+      - OPENAI_MAX_TOKENS=32000
+      - OPENAI_MAX_TOKENS_PRECHECK=1024
+      - SAFE_ORIGINS=http://consumer-service:8090,http://api-server:8080,http://llm-node:3000
+      - PORT=8090
+      - NODE=consumer-service
+      - BUNDLE=docker
+      - GEMINI_API_KEY=
+      - MODE=cli
+      - DEFAULT_MODEL=anthropic
+      - AMQP_URL=amqp://guest:guest@rabbitmq:5672/
+      - REDIS_ADDR=redis:6379
+      - SUPPORTED_MODELS=anthropic,openai,gemini
+    healthcheck:
+      test: ["CMD-SHELL", "sleep 3; curl -f http://localhost:8090/ || exit 1"]
+      interval: 5s
+      retries: 5
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      llm-node:
+        condition: service_healthy
+
+  llm-node:
+    image: ghcr.io/substrate-cli/substrate-cli-llm-node:latest
+    container_name: llm-node
+    restart: unless-stopped
+    ports:
+      - "8088:3000"
+    environment:
+      - PORT=3000
+      - ANTHROPIC_KEY=
+      - OPENAI_API_KEY=
+      - GEMINI_API_KEY=
+      - DEFAULT_LLM=anthropic
+      - MODE=cli
+      - BUNDLE=docker
+      - SUPPORTED_MODELS=anthropic,openai,gemini
+      - SAFE_ORIGINS=http://consumer-service:8090,http://api-server:8080,http://llm-node:3000
+      - ANTHROPIC_MAX_TOKENS=32000
+      - ENVIRONMENT=local
+      - API_SERVER_URL=http://api-server:8080
+      - AMQP_URL=amqp://guest:guest@rabbitmq:5672/
+    healthcheck:
+      test:
+        ["CMD-SHELL", "sleep 3; curl -f http://localhost:3000/live || exit 1"]
+      interval: 5s
+      retries: 5
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+volumes:
+  substrate-data:
